@@ -10,6 +10,7 @@ import pandas as pd
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns 
 
 os.chdir("C:\\Users\\Chase\\Desktop\\School\\Fall 2017\\CMDA 4684\\County")
 
@@ -18,5 +19,63 @@ data = pd.read_csv("data\ohio.csv")
 unemployment = pd.read_csv("data\OhioUnemploymentReport.csv")
 education = pd.read_csv("data\EducationReport.csv")
 
+#column name cleanup
+education['Name'] = education['Name'].apply(lambda x: x.upper())
+unemployment.rename(columns={'Unnamed: 0': 'County'}, inplace=True)
 
-#Remove any comma's
+#convert the hh income column from a string to an int
+unemployment['Median HH Income'] = unemployment['Median Household Income (2015)']\
+                                        .str.replace('$', '')
+unemployment['Median HH Income'] = unemployment['Median HH Income']\
+                                        .str.replace(',', '')                                        
+unemployment['Median HH Income'] = pd.to_numeric(unemployment['Median HH Income'],
+                                         errors='coerce')
+#unemployment dataset has the word county following each county.
+                                         
+unemployment['County'] = unemployment['County'].str.replace('COUNTY', '')
+unemployment['County'] = unemployment['County'].str.strip()
+unemployment['County'] = unemployment['County'].apply(lambda x: x.upper())
+education['Name'] = education['Name'].str.strip()
+data['County'] = data['County'].str.strip()
+
+#subset opoid overdose data for 2011-2016 total
+overdose = data[['County', '2011-2016 Total']]
+
+#calculate avg unemployment rate over the time period 2011-2015
+unemployment['2011-2015 Avg'] = unemployment[['2011', '2012', '2013', '2014',
+                                                '2015']].mean(axis=1)
+
+merged = overdose.merge(education[['Name', '2011-2015' ]],
+                    left_on='County', right_on='Name')
+merged = merged.merge(unemployment[['County', '2011-2015 Avg', 'Median HH Income']])
+
+merged.rename(columns={'2011-2016 Total': '2011-2016 Total Deaths', '2011-2015':
+                      '2011-2015 Avg Edu', '2011-2015 Avg':'2011-2015 Avg Unemploy'}
+                    , inplace=True)
+
+merged.drop('Name', inplace=True, axis=1)
+
+
+
+##plot time series of data ov
+#opioid_df = data.iloc[0:88,0:12]
+#opioid_pivot = pd.melt(opioid_df, id_vars = ['County'], var_name = 'Year', 
+#               value_name = 'Count')
+#
+##get distinct counties
+#counties = opioid_pivot['County'].unique().tolist()
+#
+#
+#sns.tsplot(opioid_pivot, time='Year', value='Count', condition='County')
+#
+#
+#
+#for county in counties:
+#    sns.kdeplot(opioid_dfly)
+#    
+#plt.plot(opioid_pivot['Year'], opioid_pivot['Count'], 
+#                color=opioid_pivot['County'])
+
+
+
+
