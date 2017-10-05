@@ -7,10 +7,13 @@ Chase Ginther
 """
 
 import pandas as pd
+import numpy as np
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns 
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
 
 os.chdir("C:\\Users\\Chase\\Desktop\\School\\Fall 2017\\CMDA 4684\\County")
 
@@ -49,11 +52,41 @@ merged = overdose.merge(education[['Name', '2011-2015' ]],
                     left_on='County', right_on='Name')
 merged = merged.merge(unemployment[['County', '2011-2015 Avg', 'Median HH Income']])
 
+
 merged.rename(columns={'2011-2016 Total': '2011-2016 Total Deaths', '2011-2015':
                       '2011-2015 Avg Edu', '2011-2015 Avg':'2011-2015 Avg Unemploy'}
                     , inplace=True)
 
 merged.drop('Name', inplace=True, axis=1)
+
+training = np.array(merged.iloc[:,1:5])
+
+##Run PCA on training data. 
+pca = PCA(n_components = 2)
+pca.fit(training)
+
+X = pca.transform(training)
+
+
+##Run K-Means
+kmean = KMeans(3, init='k-means++')
+kmean.fit(X)
+
+labels = kmean.labels_
+
+# Step size of the mesh. Decrease to increase the quality of the VQ.
+h = .02     # point in the mesh [x_min, x_max]x[y_min, y_max].
+
+# Plot the decision boundary. For that, we will assign a color to each
+x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+
+# Obtain labels for each point in mesh. Use last trained model.
+Z = kmean.predict(np.c_[xx.ravel(), yy.ravel()])
+
+#obtain our predictions on the training
+Z = kmean.predict(np.c_)
 
 
 
