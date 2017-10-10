@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import normalize
 
 os.chdir("C:\\Users\\Chase\\Desktop\\School\\Fall 2017\\CMDA 4684\\County")
 
@@ -61,33 +62,52 @@ merged.drop('Name', inplace=True, axis=1)
 
 training = np.array(merged.iloc[:,1:5])
 
+##we want to normalize this data column wise in the matrix.
+training_norm = normalize(training, axis=0)
+
 ##Run PCA on training data. 
-pca = PCA(n_components = 2)
-pca.fit(training)
+pca = PCA()
+pca.fit(training_norm)
 
-X = pca.transform(training)
+X = pca.transform(training_norm)
 
 
-##Run K-Means
-kmean = KMeans(3, init='k-means++')
+#Evaluate Kmeans model with varius ks
+
+inertia_list = []
+k_list  = []
+for k in range(1, 10):
+    kmean = KMeans(k, init='k-means++')
+    kmean.fit(X)
+    k_list.append(k)
+    inertia_list.append(kmean.inertia_)
+    
+ #plot
+
+plt.plot(k_list, inertia_list)   
+plt.title("Inertia(SSE) per Kmeans fit with given K. ")
+plt.xlabel("K")
+plt.ylabel("Inertia(SSE)")
+
+##Run K-Means with selected k value from previous analysis. 
+k=2
+kmean = KMeans(k, init='k-means++')
 kmean.fit(X)
 
 labels = kmean.labels_
+centroids = kmean.cluster_centers_
+colors = ['b', 'g', 'y']
 
-# Step size of the mesh. Decrease to increase the quality of the VQ.
-h = .02     # point in the mesh [x_min, x_max]x[y_min, y_max].
-
-# Plot the decision boundary. For that, we will assign a color to each
-x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-
-# Obtain labels for each point in mesh. Use last trained model.
-Z = kmean.predict(np.c_[xx.ravel(), yy.ravel()])
-
-#obtain our predictions on the training
-Z = kmean.predict(np.c_)
-
+for i in range(k):
+    xs = X[np.where(labels == i)]        
+    plt.plot(xs[:, 0], xs[:, 1], 'o', color=colors[i], markersize=4)
+    print(i)
+    # plot the centroids
+    lines = plt.plot(centroids[i,0],centroids[i,1],'kx')
+    # make the centroid x's bigger
+    plt.setp(lines,ms=15.0)
+    plt.setp(lines,mew=2.0)
+    plt.title("Kmeans clustering with k=3")
 
 
 ##plot time series of data ov
