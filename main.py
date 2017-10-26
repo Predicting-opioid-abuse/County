@@ -90,7 +90,7 @@ plt.xlabel("K")
 plt.ylabel("Inertia(SSE)")
 
 ##Run K-Means with selected k value from previous analysis. 
-k=2
+k=3
 kmean = KMeans(k, init='k-means++')
 kmean.fit(X)
 
@@ -109,7 +109,10 @@ for i in range(k):
     plt.setp(lines,mew=2.0)
     plt.title("Kmeans clustering with k=3")
 
+#tie back kmeans results to original dataframe
+merged['kmean_label'] = pd.Series(labels)
 
+merged.to_csv("data_kmeans.csv")
 ##plot time series of data ov
 #opioid_df = data.iloc[0:88,0:12]
 #opioid_pivot = pd.melt(opioid_df, id_vars = ['County'], var_name = 'Year', 
