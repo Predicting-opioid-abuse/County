@@ -23,6 +23,9 @@ data = pd.read_csv("data\ohio.csv")
 unemployment = pd.read_csv("data\OhioUnemploymentReport.csv")
 education = pd.read_csv("data\EducationReport.csv")
 
+pop = pd.read_csv("data\popestimates.csv")
+
+
 #column name cleanup
 education['Name'] = education['Name'].apply(lambda x: x.upper())
 unemployment.rename(columns={'Unnamed: 0': 'County'}, inplace=True)
@@ -45,12 +48,25 @@ data['County'] = data['County'].str.strip()
 #subset opoid overdose data for 2011-2016 total
 overdose = data[['County', '2011-2016 Total']]
 
+#clean population data
+pop['Value'] = pop['Value'].str.replace(',', '')  
+pop['Value'] =  pd.to_numeric(pop['Value'],
+                                         errors='coerce')
+pop.rename(columns={'Value':'Population'}, inplace=True)
+pop['County'] = pop['County'].str.replace('COUNTY', '')
+pop['County'] = pop['County'].str.strip()
+pop['County'] = pop['County'].apply(lambda x: x.upper())
+
+
+
 #calculate avg unemployment rate over the time period 2011-2015
 unemployment['2011-2015 Avg'] = unemployment[['2011', '2012', '2013', '2014',
                                                 '2015']].mean(axis=1)
 
+#scale 2011-2015 avg per 10,000 people
 merged = overdose.merge(education[['Name', '2011-2015' ]],
                     left_on='County', right_on='Name')
+merged = merged.merge(pop, on='County')
 merged = merged.merge(unemployment[['County', '2011-2015 Avg', 'Median HH Income']])
 
 
@@ -60,6 +76,10 @@ merged.rename(columns={'2011-2016 Total': '2011-2016 Total Deaths', '2011-2015':
 
 merged.drop('Name', inplace=True, axis=1)
 
+#scale the deaths column by the population
+merged['2011-2016 Total Deaths'] = merged['2011-2016 Total Deaths'] /(merged['Population']/100000)
+
+merged.drop('Population', axis=1, inplace=True)
 training = np.array(merged.iloc[:,1:5])
 
 ##we want to normalize this data column wise in the matrix.
@@ -112,26 +132,30 @@ for i in range(k):
 #tie back kmeans results to original dataframe
 merged['kmean_label'] = pd.Series(labels)
 
+#if you want to export just the kmeans analysis
 merged.to_csv("data_kmeans.csv")
-##plot time series of data ov
-#opioid_df = data.iloc[0:88,0:12]
-#opioid_pivot = pd.melt(opioid_df, id_vars = ['County'], var_name = 'Year', 
-#               value_name = 'Count')
-#
-##get distinct counties
-#counties = opioid_pivot['County'].unique().tolist()
-#
-#
-#sns.tsplot(opioid_pivot, time='Year', value='Count', condition='County')
-#
-#
-#
-#for county in counties:
-#    sns.kdeplot(opioid_dfly)
-#    
-#plt.plot(opioid_pivot['Year'], opioid_pivot['Count'], 
-#                color=opioid_pivot['County'])
 
+mean_deaths = merged.groupby(['kmean_label'])['2011-2016 Total Deaths'].mean().reset_index(name="Mean Deaths")
+stddev_deaths = merged.groupby(['kmean_label'])['2011-2016 Total Deaths'].std().reset_index(name="Std Dev Deaths")
+mean_income = merged.groupby(['kmean_label'])['Median HH Income'].mean().reset_index(name="Mean Median HH Income")
+stddev_income = merged.groupby(['kmean_label'])['Median HH Income'].std().reset_index(name="Std dev Median HH Income")
+mean_education = merged.groupby(['kmean_label'])['2011-2015 Avg Edu'].mean().reset_index(name="Mean Education")
+stddev_education = merged.groupby(['kmean_label'])['2011-2015 Avg Edu'].std().reset_index(name="Std dev Education")
+mean_unemploy = merged.groupby(['kmean_label'])['2011-2015 Avg Unemploy'].mean().reset_index(name="Mean Unemployment")
+stddev_unemploy = merged.groupby(['kmean_label'])['2011-2015 Avg Unemploy'].std().reset_index(name="Std dev Unemploy")
+
+#get a dummy row count for the grouping
+row_count = merged.groupby(['kmean_label'])['2011-2016 Total Deaths'].count().reset_index(name="n") 
+
+
+grouped = mean_deaths.merge(stddev_deaths, on='kmean_label')
+grouped = grouped.merge(mean_income, on='kmean_label')
+grouped = grouped.merge(stddev_income, on='kmean_label')
+grouped = grouped.merge(mean_education, on='kmean_label')
+grouped = grouped.merge(stddev_education, on='kmean_label')
+grouped = grouped.merge(mean_unemploy, on='kmean_label')
+grouped = grouped.merge(stddev_unemploy, on='kmean_label')
+grouped = grouped.merge(row_count, on='kmean_label')
 
 
 
