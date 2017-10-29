@@ -80,7 +80,7 @@ merged.drop('Name', inplace=True, axis=1)
 merged['2011-2016 Total Deaths'] = merged['2011-2016 Total Deaths'] /(merged['Population']/100000)
 
 merged.drop('Population', axis=1, inplace=True)
-training = np.array(merged.iloc[:,1:5])
+training = np.array(merged.iloc[:,2:5])
 
 ##we want to normalize this data column wise in the matrix.
 training_norm = normalize(training, axis=0)
@@ -102,7 +102,7 @@ for k in range(1, 10):
     k_list.append(k)
     inertia_list.append(kmean.inertia_)
     
- #plot
+
 
 plt.plot(k_list, inertia_list)   
 plt.title("Inertia(SSE) per Kmeans fit with given K. ")
@@ -157,5 +157,5 @@ grouped = grouped.merge(mean_unemploy, on='kmean_label')
 grouped = grouped.merge(stddev_unemploy, on='kmean_label')
 grouped = grouped.merge(row_count, on='kmean_label')
 
-
-
+#export the summary table
+grouped.to_csv("kmeans_summary.csv")
